@@ -69,7 +69,6 @@ def expand_leaf(node: MCTSNode, board: Board, state):
     if node.untried_actions:
         action = node.untried_actions.pop()
         next_state = board.next_state(state, action)
-        legal_actions = board.legal_actions(next_state)
         child_node = MCTSNode(parent=node, parent_action=action, action_list=board.legal_actions(state))
         node.child_nodes[action] = child_node
         return child_node, next_state
@@ -137,7 +136,8 @@ def get_best_action(root_node: MCTSNode):
     
     """
     assert root_node.child_nodes, "Root node has no children"
-    return max(root_node.child_nodes, key=lambda x: x.wins / max(x.visits, 1)).parent_action
+    return max(root_node.child_nodes.values(), key=lambda x: x.wins / max(x.visits, 1)).parent_action
+    #return max(root_node.child_nodes.values(), key=lambda x: x.visits).parent_action
     
 def is_win(board: Board, state, identity_of_bot: int):
     # checks if state is a win state for identity_of_bot
@@ -173,6 +173,7 @@ def think(board: Board, current_state):
     # Return an action, typically the most frequently used action (from the root) or the action with the best
     # estimated win rate.
     best_action = get_best_action(root_node)
-    
-    print(f"Action chosen: {best_action}")
+    #print(f"Action chosen: {best_action} winrate: {root_node.child_nodes[best_action].wins / root_node.child_nodes[best_action].visits:.2f}")
+    #print(board.display(current_state, None)) 
+    # print(f"Action chosen: {best_action}")
     return best_action
