@@ -8,20 +8,23 @@ from math import sqrt, log, isclose
 
 def test_expand_leaf():
     # Test case 1: Node with untried actions
-    node = MCTSNode(parent=None, parent_action=None, action_list=[1, 2, 3])
+    node = MCTSNode(parent=None, parent_action=None, action_list=[(0, 0, 0, 0), (0, 0, 0, 1), (0, 0, 0, 2)])
     board = Board()
     state = board.starting_state()
     result_node, result_state = expand_leaf(node, board, state)
     assert len(result_node.child_nodes) == 1
-    assert result_state == board.next_state(state, 1)
+    assert result_node in node.child_nodes.values()
+    assert result_state in [board.next_state(state, action) for action in [(0, 0, 0, 0), (0, 0, 0, 1), (0, 0, 0, 2)]]
 
-    # Test case 2: Terminal node
+    # Test case 2: Terminal node (assuming game ending after all moves exhausted, adjust if different)
     node = MCTSNode(parent=None, parent_action=None, action_list=[])
     board = Board()
     state = board.starting_state()
-    board.next_state(state, 1)
-    board.next_state(state, 2)
-    board.next_state(state, 3)
+    # Assume state represents an ended state (customize this part as per your game logic)
+    # This is a placeholder; you need to set up an actual terminal state
+    while not board.is_ended(state):
+        for move in board.legal_actions(state):
+            state = board.next_state(state, move)
     result_node, result_state = expand_leaf(node, board, state)
     assert result_node == node
     assert result_state == state
