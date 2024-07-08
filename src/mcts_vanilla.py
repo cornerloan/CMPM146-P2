@@ -69,7 +69,7 @@ def expand_leaf(node: MCTSNode, board: Board, state):
     if node.untried_actions:
         action = node.untried_actions.pop()
         next_state = board.next_state(state, action)
-        child_node = MCTSNode(parent=node, parent_action=action, action_list=board.legal_actions(state))
+        child_node = MCTSNode(parent=node, parent_action=action, action_list=board.legal_actions(next_state))
         node.child_nodes[action] = child_node
         return child_node, next_state
     #otherwise we can assume this node has no other actions to perform (game ended)
