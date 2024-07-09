@@ -2,10 +2,17 @@
 from mcts_node import MCTSNode
 from p2_t3 import Board
 from random import choice
-from math import sqrt, log
+from math import sqrt, log, isclose
 
 num_nodes = 1000
 explore_faction = 2.
+
+# Eval consts
+# The value given to a tile that is a win for one player
+win_value = 10
+# The value given to a move that gives the opponent free choice on their turn
+# Free choice means they can place a mark in any tile because the designated tile was full
+free_choice_penalty = -5
 
 def traverse_nodes(node: MCTSNode, board: Board, state, bot_identity: int):
     """ Traverses the tree until the end criterion are met.
@@ -87,11 +94,29 @@ def rollout(board: Board, state):
 
     """
     while board.points_values(state) is None:
+        player = board.current_player(state)
         best_action = choice(board.legal_actions(state))
-        #for action in board.legal_actions(state):
+        best_value = float('INF') * 1 if player == 2 else -1
+        #  1   2   4
+        #  8   16  32
+        #  64  128 256
+
+        for action in board.legal_actions(state):
+            R, C, r, c = action
+            next_state = board.next_state(state, action)
+            action_score = evaluate_tile(board, next_state, R, C)
             # Is action placing tile into a generally good square?
             # Will action be good for this tile? Ex. set player up to score
             # Will action place opponent in bad tile?
+            next_tile_score = evaluate_tile(board, next_state, r, c)
+            if isclose(abs(next_tile_score), win_value):
+                action_score += free_choice_penalty * 1 if player == 1 else -1
+            else:
+                if next_tile_score < 0 and player == 1 or next_tile_score > 0 and player == 2:
+                    action_score += next_tile_score * 0.5
+            if player == 1 and action_score > best_value or player == 2 and action_score < best_value:
+                best_action = action
+                best_value = action_score
         state = board.next_state(state, best_action)
     return state 
 
@@ -179,3 +204,77 @@ def think(board: Board, current_state):
     
     print(f"Action chosen: {best_action}")
     return best_action
+
+
+def evaluate_tile(board : Board, state, row, column):
+    """
+
+    Returns:    The evaluation for  the board: positive for p1 and negative for p2.
+
+    """
+    # Constants
+    row_mask = lambda row: 0b111 << row
+    col_mask = lambda col: 0b001001001 << col
+    lr_diag_mask = 0b100010001
+    rl_diag_mask = 0b001010100
+
+    score = 0
+    p1 = state[3 * row + column]
+    p2 = state[3 * row + column + 1]
+    all = p1 | p2
+    # Check for wins/winnability in rows and cols
+    # If player wins then return immediately
+    for row in range(3):
+        p1_row = row_mask(row) & p1
+        p2_row = row_mask(row) & p2
+        row_score = 0
+        # Check for win
+        if not (p1_row ^ row_mask(row) and p2_row ^ row_mask(row)):
+            return win_value * (1 if p1_row else -1)
+        # Score in favor of player that can score off of this row
+        row_score = count_bits(p1_row) - count_bits(p2_row)
+        # Check for ties
+        row_score *= (p1_row == 0 or p2_row == 0) and (p1_row | p2_row) != 0
+        score += row_score
+    for col in range(3):
+        p1_col = col_mask(col) & p1
+        p2_col = col_mask(col) & p2
+        col_score = 0
+        # Check for win
+        if not (p1_col ^ col_mask(col) and p2_col ^ col_mask(col)):
+            return win_value * (1 if p1_col else -1)
+        # Score in favor of player that can score off of this col
+        col_score = count_bits(p1_col) - count_bits(p2_col)
+        # Check for ties
+        col_score *= (p1_col == 0 or p2_col == 0) and (p1_col | p2_col) != 0
+        score += col_score
+    
+    # Check for diagonal wins
+    lr_diag = lr_diag_mask & all
+    rl_diag = rl_diag_mask & all
+    diag_score = 0
+    # Check for win in left-to-right diagonal
+    if not ((lr_diag & p1) ^ lr_diag_mask and (lr_diag & p2) ^ lr_diag_mask):
+        return win_value * (1 if lr_diag & p1 else -1)
+    # Score in favor of player that can score off of this diagonal
+    diag_score = count_bits(lr_diag & p1) - count_bits(lr_diag & p2)
+    # Check for ties
+    diag_score *= bool(lr_diag & p1) ^ bool(lr_diag & p2)
+    score += diag_score
+    # Check for win in right-to-left diagonal
+    if not ((rl_diag & p1) ^ rl_diag_mask and (rl_diag & p1) ^ rl_diag_mask):
+        return win_value * (1 if rl_diag & p1 else -1)
+    # Score in favor of player that can score off of this diagonal
+    diag_score = count_bits(rl_diag & p1) - count_bits(rl_diag & p2)
+    # Check for ties
+    diag_score *= bool(rl_diag & p1) ^ bool(rl_diag & p2)
+    score += diag_score
+    
+    return score
+
+def count_bits(mask):
+    bits = 0
+    while(mask):
+        bits += mask & 1
+        mask >>= 1
+    return bits

@@ -11,6 +11,14 @@
             "program": "'${workspaceFolder}/src/p2_sim.py'",
             "console": "integratedTerminal",
             "args": "rollout_bot mcts_vanilla"
+        },
+        {
+            "name": "Debug MTCS Modified",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "'${workspaceFolder}/src/p2_sim.py'",
+            "console": "integratedTerminal",
+            "args": "rollout_bot mcts_modified"
         }
     ]
 }
