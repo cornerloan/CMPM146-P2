@@ -3,7 +3,7 @@ from mcts_node import MCTSNode
 from p2_t3 import Board
 from random import choice
 from math import sqrt, log
-import functools
+import multiprocessing as mp
 
 num_nodes = 100
 explore_faction = 2.
@@ -157,19 +157,10 @@ def think(board: Board, current_state):
     """
     bot_identity = board.current_player(current_state) # 1 or 2
     root_node = MCTSNode(parent=None, parent_action=None, action_list=board.legal_actions(current_state))
-
-    for _ in range(num_nodes):
-        state = current_state
-        node = root_node
-
-        # Do MCTS - This is all you!
-        # ...
-        node, state = traverse_nodes(node, board, state, bot_identity)
-        node, state = expand_leaf(node, board, state)
-        terminal_state = rollout(board, state)
-        player_won = is_win(board, terminal_state, bot_identity)
-        backpropagate(node, player_won)
-
+    pool = mp.Pool(mp.cpu_count())
+    
+    pool.apply(think_internal, [root_node, board, current_state, bot_identity])
+    pool.close()
     # Return an action, typically the most frequently used action (from the root) or the action with the best
     # estimated win rate.
     best_action = get_best_action(root_node)
@@ -177,3 +168,15 @@ def think(board: Board, current_state):
     #print(board.display(current_state, None)) 
     # print(f"Action chosen: {best_action}")
     return best_action
+
+def think_internal(root_node, board, state, bot_identity):
+    state = state
+    node = root_node
+
+    # Do MCTS - This is all you!
+    # ...
+    node, state = traverse_nodes(node, board, state, bot_identity)
+    node, state = expand_leaf(node, board, state)
+    terminal_state = rollout(board, state)
+    player_won = is_win(board, terminal_state, bot_identity)
+    backpropagate(node, player_won)
