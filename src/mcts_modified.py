@@ -87,8 +87,12 @@ def rollout(board: Board, state):
 
     """
     while board.points_values(state) is None:
-        action = choice(board.legal_actions(state))
-        state = board.next_state(state, action)
+        best_action = choice(board.legal_actions(state))
+        #for action in board.legal_actions(state):
+            # Is action placing tile into a generally good square?
+            # Will action be good for this tile? Ex. set player up to score
+            # Will action place opponent in bad tile?
+        state = board.next_state(state, best_action)
     return state 
 
 
