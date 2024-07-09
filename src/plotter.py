@@ -1,6 +1,7 @@
 import time
 import matplotlib.pyplot as plt
 from functools import reduce, filter
+import json
 
 timers = {}
 game_data = {[]}
@@ -31,7 +32,8 @@ def clear_game_data() -> dict:
 
 
 def save_data_to_file():
-	pass
+	with open('game_data.json', 'w') as file:
+		json.dump(game_data, file)
 
 
 def plot_exp_1() -> None:	
