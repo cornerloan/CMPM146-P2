@@ -1,11 +1,13 @@
 
+from logging import root
+import time
 from mcts_node import MCTSNode
 from p2_t3 import Board
 from random import choice
 from math import sqrt, log
-import functools
+import multiprocessing as mp
 
-num_nodes = 100
+num_nodes = 5000
 explore_faction = 2.
 
 def traverse_nodes(node: MCTSNode, board: Board, state, bot_identity: int):
@@ -145,7 +147,7 @@ def is_win(board: Board, state, identity_of_bot: int):
     assert outcome is not None, "is_win was called on a non-terminal state"
     return outcome[identity_of_bot] == 1
 
-def think(board: Board, current_state):
+def think(board: Board, current_state, timeout: float = -1):
     """ Performs MCTS by sampling games and calling the appropriate functions to construct the game tree.
 
     Args:
@@ -156,24 +158,58 @@ def think(board: Board, current_state):
 
     """
     bot_identity = board.current_player(current_state) # 1 or 2
+    end_time = time.time() + timeout - 0.25 if timeout > 0 else None
     root_node = MCTSNode(parent=None, parent_action=None, action_list=board.legal_actions(current_state))
-
-    for _ in range(num_nodes):
-        state = current_state
-        node = root_node
-
-        # Do MCTS - This is all you!
-        # ...
-        node, state = traverse_nodes(node, board, state, bot_identity)
-        node, state = expand_leaf(node, board, state)
-        terminal_state = rollout(board, state)
-        player_won = is_win(board, terminal_state, bot_identity)
-        backpropagate(node, player_won)
-
+    thread_count = max(min(mp.cpu_count()-1, 8), 1)
+    pool = mp.Pool(thread_count)
+    args_list = [(root_node.untried_actions.copy(), board, current_state, bot_identity, end_time, num_nodes // thread_count) for _ in range(mp.cpu_count())]
+    async_results = pool.starmap_async(think_internal, args_list)
+    try:
+        results = async_results.get(timeout if timeout > 0 else None)
+    except mp.TimeoutError:
+        raise TimeoutError("MCTS took too long to complete")
+    finally:
+        pool.close()
+        pool.join()
+    for result in results:
+        if isinstance(result, Exception):
+            raise result
+        for node in result.child_nodes.values():
+            if node.parent_action in root_node.child_nodes:
+                root_node.child_nodes[node.parent_action].visits += node.visits
+                root_node.child_nodes[node.parent_action].wins += node.wins
+            else:
+                root_node.child_nodes[node.parent_action] = node
+                node.parent = root_node
     # Return an action, typically the most frequently used action (from the root) or the action with the best
     # estimated win rate.
     best_action = get_best_action(root_node)
     #print(f"Action chosen: {best_action} winrate: {root_node.child_nodes[best_action].wins / root_node.child_nodes[best_action].visits:.2f}")
     #print(board.display(current_state, None)) 
-    # print(f"Action chosen: {best_action}")
+    print(f"Action chosen: {best_action}")
     return best_action
+
+def think_internal(actions, board, current_state, bot_identity, end_time=None, cutoff=num_nodes):
+    root_node = MCTSNode(None, None, actions)
+    try:
+        if end_time is not None:
+            while time.time() < end_time:
+                node = root_node
+                state = current_state
+                node, state = traverse_nodes(node, board, state, bot_identity)
+                node, state = expand_leaf(node, board, state)
+                terminal_state = rollout(board, state)
+                player_won = is_win(board, terminal_state, bot_identity)
+                backpropagate(node, player_won)
+        else:
+            for _ in range(cutoff):
+                node = root_node
+                state = current_state
+                node, state = traverse_nodes(node, board, state, bot_identity)
+                node, state = expand_leaf(node, board, state)
+                terminal_state = rollout(board, state)
+                player_won = is_win(board, terminal_state, bot_identity)
+                backpropagate(node, player_won)
+        return root_node
+    except Exception as e:
+        return e

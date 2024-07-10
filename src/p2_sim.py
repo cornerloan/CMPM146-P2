@@ -1,5 +1,5 @@
+from os import name
 import sys
-from timeit import default_timer as time
 import p2_t3
 import mcts_vanilla
 import mcts_modified
@@ -16,61 +16,62 @@ players = dict(
     mcts_vanilla_tester=mcts_vanilla_tester.think,
 )
 
-board = p2_t3.Board()
-state0 = board.starting_state()
+if __name__ == '__main__':
+    board = p2_t3.Board()
+    state0 = board.starting_state()
 
-if len(sys.argv) != 3:
-    print("Need two player arguments")
-    exit(1)
+    if len(sys.argv) != 3:
+        print("Need two player arguments")
+        exit(1)
 
-p1 = sys.argv[1]
-if p1 not in players:
-    print("p1 not in "+players.keys().join(","))
-    exit(1)
-p2 = sys.argv[2]
-if p2 not in players:
-    print("p2 not in "+players.keys().join(","))
-    exit(1)
+    p1 = sys.argv[1]
+    if p1 not in players:
+        print("p1 not in "+players.keys().join(","))
+        exit(1)
+    p2 = sys.argv[2]
+    if p2 not in players:
+        print("p2 not in "+players.keys().join(","))
+        exit(1)
 
-player1 = players[p1]
-player2 = players[p2]
+    player1 = players[p1]
+    player2 = players[p2]
 
-rounds = 100
-wins = {'draw':0, 1:0, 2:0}
+    rounds = 10
+    wins = {'draw':0, 1:0, 2:0}
 
-#start = time()  # To log how much time the simulation takes.
-plotter.start_timer()
-for i in range(rounds):
-    plotter.start_timer()
-    print("")
-    print("Round %d, fight!" % i)
+    #start = time()  # To log how much time the simulation takes.
+    plotter.start_timer('main')
+    for i in range(rounds):
+        plotter.start_timer('game')
+        print("\nRound %d, fight!" % i)
 
-    state = state0
-    last_action = None
-    current_player = player1
-    while not board.is_ended(state):
-        last_action = current_player(board, state)
-        state = board.next_state(state, last_action)
-        current_player = player1 if current_player == player2 else player2
-    print("Finished!")
-    print()
-    final_score = board.points_values(state)
-    winner = 'draw'
-    if final_score[1] == 1:
-        winner = 1
-    elif final_score[2] == 1:
-        winner = 2
-    print("The %s bot wins this round! (%s)" % (winner, str(final_score)))
-    plotter.add_game_data(winner, plotter.stop_timer(), "Game " + i)
-    wins[winner] = wins.get(winner, 0) + 1
+        state = state0
+        last_action = None
+        current_player = player1
+        while not board.is_ended(state):
+            last_action = current_player(board, state)
+            state = board.next_state(state, last_action)
+            current_player = player1 if current_player == player2 else player2
+        print("Finished!\n")
+        final_score = board.points_values(state)
+        winner = 'draw'
+        if final_score[1] == 1:
+            winner = 1
+        elif final_score[2] == 1:
+            winner = 2
+        print("The %s bot wins this round! (%s)" % (winner, str(final_score)))
+        if winner == 'draw':
+            winner = 0
+        plotter.add_game_data(winner, plotter.stop_timer('game'), f"Game {i}")
+        wins[winner] = wins.get(winner, 0) + 1
+    total_time = plotter.stop_timer('main')
+    plotter.plot_exp_1()
+    #print("")
+    #print("Final win counts:", dict(wins))
 
-#print("")
-#print("Final win counts:", dict(wins))
-
-# Also output the time elapsed.
-#end = time()
-#print(end - start, ' seconds')
+    # Also output the time elapsed.
+    #end = time()
+    #print(end - start, ' seconds')
 
 
-plotter.plot_exp_1()
-#plotter.plot_exp_2()
+    #plotter.plot_exp_2()
