@@ -5,12 +5,17 @@ import mcts_vanilla
 import mcts_modified
 import random_bot
 import rollout_bot
+import plotter
+import mcts_vanilla_tester
+import mcts_modified_tester
 
 players = dict(
     random_bot=random_bot.think,
     rollout_bot=rollout_bot.think,
     mcts_vanilla=mcts_vanilla.think,
     mcts_modified=mcts_modified.think,
+    mcts_vanilla_tester=mcts_vanilla_tester.think,
+    mcts_modified_tester=mcts_modified_tester.think
 )
 
 board = p2_t3.Board()
@@ -32,12 +37,13 @@ if p2 not in players:
 player1 = players[p1]
 player2 = players[p2]
 
-rounds = 25
+rounds = 100
 wins = {'draw':0, 1:0, 2:0}
 
-start = time()  # To log how much time the simulation takes.
+#start = time()  # To log how much time the simulation takes.
+plotter.start_timer()
 for i in range(rounds):
-
+    plotter.start_timer()
     print("")
     print("Round %d, fight!" % i)
 
@@ -57,11 +63,16 @@ for i in range(rounds):
     elif final_score[2] == 1:
         winner = 2
     print("The %s bot wins this round! (%s)" % (winner, str(final_score)))
+    plotter.add_game_data(winner, plotter.stop_timer(), "Game " + i)
     wins[winner] = wins.get(winner, 0) + 1
 
-print("")
-print("Final win counts:", dict(wins))
+#print("")
+#print("Final win counts:", dict(wins))
 
 # Also output the time elapsed.
-end = time()
-print(end - start, ' seconds')
+#end = time()
+#print(end - start, ' seconds')
+
+
+plotter.plot_exp_1()
+#plotter.plot_exp_2()
