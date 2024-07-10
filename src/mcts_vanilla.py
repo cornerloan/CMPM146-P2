@@ -8,6 +8,7 @@ from math import sqrt, log
 import multiprocessing as mp
 
 num_nodes = 100
+num_nodes_per_cpu = num_nodes // mp.cpu_count()
 explore_faction = 2.
 
 def traverse_nodes(node: MCTSNode, board: Board, state, bot_identity: int):
@@ -147,7 +148,7 @@ def is_win(board: Board, state, identity_of_bot: int):
     assert outcome is not None, "is_win was called on a non-terminal state"
     return outcome[identity_of_bot] == 1
 
-def think(board: Board, current_state, timeout: float = 5):
+def think(board: Board, current_state, timeout: float = -1):
     """ Performs MCTS by sampling games and calling the appropriate functions to construct the game tree.
 
     Args:
@@ -158,28 +159,33 @@ def think(board: Board, current_state, timeout: float = 5):
 
     """
     bot_identity = board.current_player(current_state) # 1 or 2
-    end_time = time.time() + timeout
+    end_time = time.time() + timeout - 0.25 if timeout > 0 else None
     root_node = MCTSNode(parent=None, parent_action=None, action_list=board.legal_actions(current_state))
-    pool = mp.Pool(mp.cpu_count())
-    args_list = [(root_node.untried_actions.copy(), board, current_state, bot_identity, end_time - 0.1) for _ in range(mp.cpu_count())]
-    async_results = pool.starmap_async(think_internal, args_list)
-    try:
-        results = async_results.get(timeout)
-    except mp.TimeoutError:
-        raise TimeoutError("MCTS took too long to complete")
-    finally:
-        pool.close()
-        pool.join()
-    for result in results:
-        if isinstance(result, Exception):
-            raise result
-        for node in result.child_nodes.values():
-            if node.parent_action in root_node.child_nodes:
-                root_node.child_nodes[node.parent_action].visits += node.visits
-                root_node.child_nodes[node.parent_action].wins += node.wins
-            else:
-                root_node.child_nodes[node.parent_action] = node
-                node.parent = root_node
+    if num_nodes <= 100:
+        num_nodes_per_cpu = num_nodes
+        root_node = think_internal(root_node.untried_actions.copy(), board, current_state, bot_identity, end_time, num_nodes_per_cpu)
+        num_nodes_per_cpu = temp
+    else:
+        pool = mp.Pool(mp.cpu_count())
+        args_list = [(root_node.untried_actions.copy(), board, current_state, bot_identity, end_time) for _ in range(mp.cpu_count())]
+        async_results = pool.starmap_async(think_internal, args_list)
+        try:
+            results = async_results.get(timeout if timeout > 0 else None)
+        except mp.TimeoutError:
+            raise TimeoutError("MCTS took too long to complete")
+        finally:
+            pool.close()
+            pool.join()
+        for result in results:
+            if isinstance(result, Exception):
+                raise result
+            for node in result.child_nodes.values():
+                if node.parent_action in root_node.child_nodes:
+                    root_node.child_nodes[node.parent_action].visits += node.visits
+                    root_node.child_nodes[node.parent_action].wins += node.wins
+                else:
+                    root_node.child_nodes[node.parent_action] = node
+                    node.parent = root_node
     # Return an action, typically the most frequently used action (from the root) or the action with the best
     # estimated win rate.
     best_action = get_best_action(root_node)
@@ -201,7 +207,7 @@ def think_internal(actions, board, current_state, bot_identity, end_time=None):
                 player_won = is_win(board, terminal_state, bot_identity)
                 backpropagate(node, player_won)
         else:
-            for _ in range(num_nodes):
+            for _ in range(num_nodes_per_cpu):
                 node = root_node
                 state = current_state
                 node, state = traverse_nodes(node, board, state, bot_identity)
@@ -209,6 +215,6 @@ def think_internal(actions, board, current_state, bot_identity, end_time=None):
                 terminal_state = rollout(board, state)
                 player_won = is_win(board, terminal_state, bot_identity)
                 backpropagate(node, player_won)
-        return node
+        return root_node
     except Exception as e:
         return e
