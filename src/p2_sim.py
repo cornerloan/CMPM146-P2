@@ -7,7 +7,6 @@ import random_bot
 import rollout_bot
 import plotter
 import mcts_vanilla_tester
-import mcts_modified_tester
 
 players = dict(
     random_bot=random_bot.think,
@@ -15,7 +14,6 @@ players = dict(
     mcts_vanilla=mcts_vanilla.think,
     mcts_modified=mcts_modified.think,
     mcts_vanilla_tester=mcts_vanilla_tester.think,
-    mcts_modified_tester=mcts_modified_tester.think
 )
 
 board = p2_t3.Board()
