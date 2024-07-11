@@ -112,8 +112,8 @@ def rollout(board: Board, state):
             if isclose(abs(next_tile_score), win_value):
                 action_score += free_choice_penalty * 1 if player == 1 else -1
             else:
-                if next_tile_score < 0 and player == 1 or next_tile_score > 0 and player == 2:
-                    action_score += next_tile_score * 0.5
+                # if next_tile_score < 0 and player == 1 or next_tile_score > 0 and player == 2:
+                action_score += next_tile_score * 0.5
             if player == 1 and action_score > best_value or player == 2 and action_score < best_value:
                 best_action = action
                 best_value = action_score
