@@ -1,0 +1,11 @@
+Vanilla:
+Mean: 1607.8715748685304
+Median: 500
+Min: 100
+Max: 75735
+
+Modified:
+Mean: 589.8578947368421
+Median: 500
+Min: 152
+Max: 51366

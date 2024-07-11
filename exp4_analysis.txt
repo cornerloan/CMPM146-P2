@@ -1,0 +1,11 @@
+Player 1 (mcts_vanilla) stats:
+Mean turn time: 0.2906028990242836
+Median turn time: 0.3065108999981021
+Min turn time: 0.012002600000414532
+Max turn time: 0.4536521999980323
+
+Player 2 (mcts_parallel) stats:
+Mean turn time: 0.7415770965001866
+Median turn time: 0.7426956999988761
+Min turn time: 0.6346593000016583
+Max turn time: 0.9159368000000541
