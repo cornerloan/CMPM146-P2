@@ -144,7 +144,7 @@ def is_win(board: Board, state, identity_of_bot: int):
     assert outcome is not None, "is_win was called on a non-terminal state"
     return outcome[identity_of_bot] == 1
 
-def think(board: Board, current_state, num_nodes: int = 100, time_limit: float = None):
+def think(board: Board, current_state, num_nodes: int = 1000, time_limit: float = None):
     """ Performs MCTS by sampling games and calling the appropriate functions to construct the game tree.
 
     Args:

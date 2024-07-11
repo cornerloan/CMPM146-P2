@@ -46,7 +46,7 @@ if __name__ == '__main__':
         last_action = None
         current_player = player1
         while not board.is_ended(state):
-            last_action = current_player(board, state, 500)
+            last_action = current_player(board, state, 1000)
             state = board.next_state(state, last_action)
             current_player = player1 if current_player == player2 else player2
         print("Finished!\n")
