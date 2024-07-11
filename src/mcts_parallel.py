@@ -7,7 +7,6 @@ from random import choice
 from math import sqrt, log
 import multiprocessing as mp
 
-num_nodes = 5000
 explore_faction = 2.
 
 def traverse_nodes(node: MCTSNode, board: Board, state, bot_identity: int):
@@ -147,25 +146,26 @@ def is_win(board: Board, state, identity_of_bot: int):
     assert outcome is not None, "is_win was called on a non-terminal state"
     return outcome[identity_of_bot] == 1
 
-def think(board: Board, current_state, timeout: float = -1):
+def think(board: Board, current_state, num_nodes:int = 1000, time_limit: float = -1):
     """ Performs MCTS by sampling games and calling the appropriate functions to construct the game tree.
 
     Args:
         board:  The game setup.
         current_state:  The current state of the game.
-
+        num_nodes:  The number of nodes to visit before stopping the search
+        timeout:    The time limit for the search. Default is -1 (no time limit)
     Returns:    The action to be taken from the current state
 
     """
     bot_identity = board.current_player(current_state) # 1 or 2
-    end_time = time.time() + timeout - 0.25 if timeout > 0 else None
+    end_time = (time.time() + time_limit - 0.25) if time_limit > 0 else None
     root_node = MCTSNode(parent=None, parent_action=None, action_list=board.legal_actions(current_state))
     thread_count = max(min(mp.cpu_count()-1, 8), 1)
     pool = mp.Pool(thread_count)
-    args_list = [(root_node.untried_actions.copy(), board, current_state, bot_identity, end_time, num_nodes // thread_count) for _ in range(mp.cpu_count())]
+    args_list = [(root_node.untried_actions.copy(), board, current_state, bot_identity, num_nodes // thread_count, end_time) for _ in range(mp.cpu_count())]
     async_results = pool.starmap_async(think_internal, args_list)
     try:
-        results = async_results.get(timeout if timeout > 0 else None)
+        results = async_results.get(time_limit if time_limit > 0 else None)
     except mp.TimeoutError:
         raise TimeoutError("MCTS took too long to complete")
     finally:
@@ -189,7 +189,7 @@ def think(board: Board, current_state, timeout: float = -1):
     print(f"Action chosen: {best_action}")
     return best_action
 
-def think_internal(actions, board, current_state, bot_identity, end_time=None, cutoff=num_nodes):
+def think_internal(actions, board, current_state, bot_identity, cutoff=250, end_time=None):
     root_node = MCTSNode(None, None, actions)
     try:
         if end_time is not None:
@@ -202,7 +202,8 @@ def think_internal(actions, board, current_state, bot_identity, end_time=None, c
                 player_won = is_win(board, terminal_state, bot_identity)
                 backpropagate(node, player_won)
         else:
-            for _ in range(cutoff):
+            num_iterations = 0
+            while num_iterations < cutoff:
                 node = root_node
                 state = current_state
                 node, state = traverse_nodes(node, board, state, bot_identity)
@@ -210,6 +211,7 @@ def think_internal(actions, board, current_state, bot_identity, end_time=None, c
                 terminal_state = rollout(board, state)
                 player_won = is_win(board, terminal_state, bot_identity)
                 backpropagate(node, player_won)
+                num_iterations += 1
         return root_node
     except Exception as e:
         return e

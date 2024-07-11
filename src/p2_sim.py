@@ -6,14 +6,12 @@ import mcts_modified
 import random_bot
 import rollout_bot
 import plotter
-import mcts_vanilla_tester
 
 players = dict(
     random_bot=random_bot.think,
     rollout_bot=rollout_bot.think,
     mcts_vanilla=mcts_vanilla.think,
     mcts_modified=mcts_modified.think,
-    mcts_vanilla_tester=mcts_vanilla_tester.think,
 )
 
 if __name__ == '__main__':

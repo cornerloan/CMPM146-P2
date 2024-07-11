@@ -2,6 +2,7 @@ from os import name
 import time
 import matplotlib.pyplot as plt
 import json
+import os
 
 timers = {}
 game_data = {}
@@ -33,7 +34,12 @@ def clear_game_data() -> dict:
 
 
 def save_data_to_file():
-    with open('game_data.json', 'w') as file:
+    file_name = 'game_data.json'
+    i = 1
+    while os.path.exists(file_name):
+        file_name = f'game_data({i}).json'
+        i += 1
+    with open(file_name, 'w') as file:
         json.dump(game_data, file)
 
 
@@ -62,14 +68,14 @@ def plot_exp_1() -> None:
     #plt.xticks(list(set(tree_sizes)))
     plt.xlabel("Tree Size")
     plt.ylabel("Winrate")
-    plt.title("Winrate vs Tree Size")
+    plt.title("Winrate VS. Tree Size")
     plt.legend(bar_labels)
     plt.show()
 
 
 def plot_exp_2() -> None:
     bar_labels = ["Vanilla", "Modified"]
-    labels = [f"Test {i}" for i in range(len(game_data))]
+    labels = [f"Test {i}" for i in range(1, len(game_data) + 1)]
     winrates_p1, winrates_p2 = [], []
     bar_width = 0.35
     for _, data in game_data.items():
@@ -93,3 +99,37 @@ def plot_exp_2() -> None:
     plt.title("Vanilla VS. Modified")
     plt.legend(bar_labels)
     plt.show()
+
+
+def plot_exp_3() -> None:
+    modified = []
+    vanilla = []
+
+    with open('tree_sizes.txt', 'r') as file:
+        lines = file.readlines()
+        for line in lines:
+            subs = line.split(":")
+            if len(subs) > 1:
+                if 'vanilla' in line.lower():
+                    line = subs[1].strip()
+                    vanilla.append(int(line))
+                elif 'modified' in line.lower():
+                    line = subs[1].strip()
+                    modified.append(int(line))
+    with open('tree_size_analysis.txt', 'w') as file:
+        file.write("Vanilla:\n")
+        file.write(f"Mean: {sum(vanilla) / len(vanilla)}\n")
+        file.write(f"Median: {sorted(vanilla)[len(vanilla) // 2]}\n")
+        file.write(f"Min: {min(vanilla)}\n")
+        file.write(f"Max: {max(vanilla)}\n\n")
+        
+        file.write("Modified:\n")
+        file.write(f"Mean: {sum(modified) / len(modified)}\n")
+        file.write(f"Median: {sorted(modified)[len(modified) // 2]}\n")
+        file.write(f"Min: {min(modified)}\n")
+        file.write(f"Max: {max(modified)}\n")
+
+
+if __name__ == '__main__':
+    plot_exp_3()
+    pass

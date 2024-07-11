@@ -3,9 +3,8 @@ from mcts_node import MCTSNode
 from p2_t3 import Board
 from random import choice
 from math import sqrt, log
-import functools
+import time
 
-num_nodes = 100
 explore_faction = 2.
 
 def traverse_nodes(node: MCTSNode, board: Board, state, bot_identity: int):
@@ -145,20 +144,25 @@ def is_win(board: Board, state, identity_of_bot: int):
     assert outcome is not None, "is_win was called on a non-terminal state"
     return outcome[identity_of_bot] == 1
 
-def think(board: Board, current_state):
+def think(board: Board, current_state, num_nodes: int = 100, time_limit: float = None):
     """ Performs MCTS by sampling games and calling the appropriate functions to construct the game tree.
 
     Args:
         board:  The game setup.
         current_state:  The current state of the game.
-
+        num_nodes:  The number of nodes to visit before stopping
+        time_limit: The time limit for the bot to run. Default is -1 (no time limit)
+    If time_limit is set, num_nodes is ignored
     Returns:    The action to be taken from the current state
 
     """
+    if time_limit is not None:
+        num_nodes = None
     bot_identity = board.current_player(current_state) # 1 or 2
     root_node = MCTSNode(parent=None, parent_action=None, action_list=board.legal_actions(current_state))
-
-    for _ in range(num_nodes):
+    start_time = time.time()
+    num_iterations = 0
+    while (time_limit is None or time.time() < start_time + time_limit) and (num_nodes is None or num_iterations < num_nodes):
         state = current_state
         node = root_node
 
@@ -169,10 +173,12 @@ def think(board: Board, current_state):
         terminal_state = rollout(board, state)
         player_won = is_win(board, terminal_state, bot_identity)
         backpropagate(node, player_won)
+        num_iterations += 1
 
     # Return an action, typically the most frequently used action (from the root) or the action with the best
     # estimated win rate.
     best_action = get_best_action(root_node)
+    print("Vanilla Tree size: ", root_node.visits, file=open("tree_sizes.txt", "a"))
     #print(f"Action chosen: {best_action} winrate: {root_node.child_nodes[best_action].wins / root_node.child_nodes[best_action].visits:.2f}")
     #print(board.display(current_state, None)) 
     # print(f"Action chosen: {best_action}")
